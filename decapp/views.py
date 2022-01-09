@@ -1,19 +1,21 @@
+from django.db.models import Avg, Count
 from django.shortcuts import render
 from django.http import HttpResponse
-from rest_framework import viewsets
 from rest_framework.response import Response
+from rest_framework.views import APIView
+from rest_framework import viewsets
 from DecCars.decapp.forms import AutoForm
-from DecCars.decapp.models import Auto, NewRate
-from DecCars.decapp.serializers import AutoSerializer, AutoDelSerializer, RateSerializer, AutoAllSerializer, \
-    PopularSerializer
-from rest_framework.decorators import action
+from DecCars.decapp.models import Car, Rate
+from DecCars.decapp.serializers import AutoSerializer, AutoDelSerializer, AutoAllSerializer, \
+    PopularSerializer, RateSerializer, RatingSerializer
+
 
 def test_response(request):
     return HttpResponse("Cars app")
 
 
 def test_heading(request):
-    auto_all = Auto.objects.all()
+    auto_all = Car.objects.all()
     # number = len(auto_all)
     return render(request, 'auto.html', {'text': auto_all})
 
@@ -29,7 +31,7 @@ class AutoViewSet(viewsets.ModelViewSet):
     """
     API endpoint that allows users to be viewed or edited.
     """
-    queryset = Auto.objects.all()
+    queryset = Car.objects.all()
     serializer_class = AutoSerializer
 
     def list(self, request, *args, **kwargs):
@@ -40,8 +42,7 @@ class AutoViewSet(viewsets.ModelViewSet):
 
     def create(self, request, *args, **kwargs):
         """POST car"""
-        car = Auto.objects.create(make=request.data['make'],
-                                 model=request.data['model'])
+        car = Car.objects.create(make=request.data['make'], model=request.data['model'])
         serializer = AutoSerializer(car, many=False)
         return Response(serializer.data)
 
@@ -50,38 +51,64 @@ class AutoViewSet(viewsets.ModelViewSet):
         car = self.get_object()
         self.perform_destroy(car)
         # car.delete()
-        return Response(f"Car deleted.")
+        return Response(f"Successfully deleted")
 
 
-class AutoDelViewSet(viewsets.ModelViewSet):
+class TestViewSet(viewsets.ModelViewSet):
     """
  test
     """
 
     def get_queryset(self):
-        queryset_id = Auto.objects.filter(id=2)
+        queryset_id = Car.objects.filter(id=2)
         return queryset_id
     serializer_class = AutoDelSerializer
 
 
 class RateViewSet(viewsets.ModelViewSet):
     """Add rate for car (scale: 1-5)"""
-    queryset = NewRate.objects.all()
+    queryset = Rate.objects.all()
     serializer_class = RateSerializer
+
+    def list(self, request, *args, **kwargs):
+        """GET rate list"""
+        queryset = self.get_queryset()
+        serializer = RateSerializer(queryset, many=True)
+        return Response(serializer.data)
 
     def create(self, request, *args, **kwargs):
         """POST rate"""
-        rate = NewRate.objects.create(rating=request.data['rating'], car_rate=request.data['car_rate'])
+        rate = Rate.objects.create(car_id=request.data["car_id"], rating=request.data["rating"])
         serializer = RateSerializer(rate, many=False)
         return Response(serializer.data)
 
 
+class RatingView(APIView):
+    serializer_class = RatingSerializer
+    queryset = Rate.objects.all()
+
+    #     data = {}
+    #     for car in Car.objects.all():
+    #         car = Rate.objects.filter(id=Rate.car_id).aggregate(avg_rating=Avg("rating"))
+    #
+    #         # cars_id = Car.id('id', flat=True)
+    #         # data = Auto.objects.filter(model=model).include(id=id)
+    #         # data = data.annotate(avg_rating=Count("new_rate__rating"))
+
+    #     return Response(data=data)
+
+
 class AllAutoViewSet(viewsets.ModelViewSet):
-    queryset = Auto.objects.all()
+    queryset = Car.objects.all()
     serializer_class = AutoAllSerializer
 
+    # def get_queryset(self):
+    # queryset = Car.objects.filter(model="Golf")
+
     def get_queryset(self):
-        queryset = Auto.objects.filter(model="Golf")
+        self.queryset = self.queryset.annotate(avg_rating=Avg("new_rate__rating"))
+        self.queryset = self.queryset.annotate(rates_number2=Count("new_rate__rating"))
+        return self.queryset
 
     def list(self, request, *args, **kwargs):
         """GET list cars"""
@@ -95,29 +122,32 @@ class AllAutoViewSet(viewsets.ModelViewSet):
         serializer = AutoDelSerializer(instance)
         return Response(serializer.data)
 
-    @action(detail=False, methods="post")
-    def avgrate(self, request, rating, **kwargs):
-        rating = NewRate.rating.get_object()
-        new_rate = Auto.objects.all()
-        avg_rating = sum(rating) / len(rating)
-        new_rate.update(avg_rating=request.data['avg_rating'])
-        # new_rate.save()
-        # car = car.avg_rating.create(avg_rating=request.data[avg_rating])
-        serializer = AutoAllSerializer(new_rate, many=True)
-        return Response(serializer.data)
+# @action(detail=False, methods="post")
+# def avgrate(self, request, rating, **kwargs):
+#     rating = Rate.rating.get_object()
+#     n_rate = Car.objects.all()
+#     avg_rating = sum(rating) / len(rating)
+#     n_rate.update(avg_rating=request.data['avg_rating'])
+#     # n_rate.save()
+#     # car = car.avg_rating.create(avg_rating=request.data[avg_rating])
+#     serializer = AutoAllSerializer(n_rate, many=True)
+#     return Response(serializer.data)
 
 
-class PopularAutoViewSet(viewsets.ModelViewSet):
-    queryset = Auto.objects.all()
-    serializer_class = PopularSerializer
+class PopularViewSet(viewsets.ModelViewSet):
+        queryset = Car.objects.all()
+        serializer_class = PopularSerializer
 
-    # def get_queryset(self):
-    #     rates_number = Auto.objects.count('model')
-    #     queryset = Auto.objects.all()
-        # queryset = Car.objects.filter(headline__contains ='model').count()
-        # return queryset
-        # rates_number = popular_car
-        # # return render(request, {'rates_number': popular_car})
-        # serializer = PopularSerializer(rates_number, many=False)
-        # return Response(serializer.data)
+        def get_queryset(self):
+            self.queryset = self.queryset.annotate(avg_rating=Count("new_rate__rating"))
+            # self.queryset = self.queryset.aggregate(Avg('rating'))
+            self.queryset = self.queryset.annotate(rates_number=Count("new_rate__rating")).order_by("-rates_number")
+            return self.queryset
 
+            # number = 0
+            # rates_number = Rate.rating[0]
+            # for car_id in Rate.rating:
+            #     freq = Rate.rating.count(car_id)
+            #     if freq > number:
+            #         number = freq
+            #         rates_number = car_id

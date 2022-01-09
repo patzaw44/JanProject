@@ -1,7 +1,7 @@
 from django.forms import ModelForm
-from .models import Auto
+from .models import Car
 
 class AutoForm(ModelForm):
     class Meta:
-        model = Auto
+        model = Car
         fields = ["make", "model"]

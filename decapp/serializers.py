@@ -1,32 +1,58 @@
-from .models import Auto, NewRate
+from .models import Car, Rate
 from rest_framework import serializers
 
 
-class AutoSerializer(serializers.HyperlinkedModelSerializer):
+class AutoSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Auto
-        fields = ['make', 'model']
+        model = Car
+        fields = ('make', 'model')
 
 
-class AutoDelSerializer(serializers.HyperlinkedModelSerializer):
+class AutoDelSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Auto
-        fields = ['id', 'model']
-
-
-class RateSerializer(serializers.HyperlinkedModelSerializer):
-    class Meta:
-        model = NewRate
-        fields = ['car_rate', 'rating']
+        model = Car
+        fields = ('id', 'model')
 
 
 class AutoAllSerializer(serializers.HyperlinkedModelSerializer):
-    class Meta:
-        model = Auto
-        fields = ['id', 'make', 'model', 'avg_rating']
+        avg_rating = serializers.SerializerMethodField()
+
+        class Meta:
+            model = Car
+            fields = ('id', 'make', 'model', 'avg_rating')
+
+        def get_avg_rating(self, obj):
+            return obj.avg_rating
+
+        # def get_avg_rating(self, obj):
+        #     if obj.rating >4:
+        #         return "Good"
+        #     else:
+        #         return "Keep going"
 
 
-class PopularSerializer(serializers.HyperlinkedModelSerializer):
+class RateSerializer(serializers.HyperlinkedModelSerializer):
+    car_id = serializers.PrimaryKeyRelatedField(queryset=Car.objects.all())
+    rating = serializers.IntegerField()
+
     class Meta:
-        model = Auto
-        fields = ['id', 'make', 'model', 'rates_number']
+        model = Rate
+        fields = ('car_id', 'rating')
+
+
+class PopularSerializer(serializers.ModelSerializer):
+    rates_number = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Car
+        fields = ('id', 'make', 'model', 'rates_number')
+
+    def get_rates_number(self, obj):
+        return obj.rates_number
+
+
+class RatingSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Rate
+        fields = ('id', 'car_id', 'rating')
+

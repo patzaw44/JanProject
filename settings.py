@@ -11,9 +11,7 @@ https://docs.djangoproject.com/en/4.0/ref/settings/
 """
 
 from pathlib import Path
-import os
-from decouple import config
-from dj_database_url import parse as dburl
+
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -34,8 +32,8 @@ DEBUG = True
 
 # DEBUG = config('DEBUG', default=False, cast=bool)
 
-ALLOWED_HOSTS = ['december-cars-app.herokuapp.com', 'localhost:8000', '127.0.0.1']
-# ALLOWED_HOSTS = []
+ALLOWED_HOSTS = []
+
 
 # Application definition
 
@@ -84,7 +82,6 @@ WSGI_APPLICATION = 'DecCars.wsgi.application'
 # DATABASES = {'default': config('DATABASE_URL', default=default_dburl, cast=dburl), }
 
 
-
 # Database
 # https://docs.djangoproject.com/en/4.0/ref/settings/#databases
 
@@ -94,7 +91,17 @@ DATABASES = {
         'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
+# ENGINE': 'django.db.backends.postgresql_psycopg2',
 
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.postgresql',
+#         'NAME': 'postgres',
+#         'USER': 'postgres',
+#         'HOST': 'db',
+#         'PORT': '5432',
+#     }
+# }
 # Password validation
 # https://docs.djangoproject.com/en/4.0/ref/settings/#auth-password-validators
 
@@ -130,7 +137,7 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/4.0/howto/static-files/
 
 STATIC_URL = '/static/'
-STATIC_ROOT = os.path.join(BASE_DIR, 'my_static')
+# STATIC_ROOT = os.path.join(BASE_DIR, 'my_static')
 STATICFILES_DIR = ['my_static']
 
 # Default primary key field type
